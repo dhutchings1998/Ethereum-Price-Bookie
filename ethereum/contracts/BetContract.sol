@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BetContractFactory {
+    using SafeMath for uint256;
     address manager;
     mapping(address => BetContract[]) public addressToContracts;
     mapping(address => bool) public addressExists;
@@ -42,6 +43,10 @@ contract BetContractFactory {
             "Bet needs to be placed at least 1 day in the future"
         );
         require(marginOfError <= 50, "Margin of error must be less than $50");
+        require(
+            block.timestamp.mul(1000).add(5000).sub(startTimestamp) < 300000,
+            "Starting timestamp must be less than 5 minutes from block timestamp"
+        );
 
         BetContract newContract = new BetContract(
             msg.sender,
@@ -91,6 +96,10 @@ contract BetContractFactory {
         payable(recipient).transfer(addressToPayout[recipient]);
         addressToPayout[recipient] = 0;
         emit PayoutWinnings(recipient);
+    }
+
+    function fetchBetContracts(address bettor) public view returns (BetContract[] memory) {
+        return addressToContracts[bettor];
     }
 
     function removeContract(uint256 index, BetContract[] storage bets)
