@@ -108,7 +108,6 @@ describe("Bet Contract Factory", () => {
 				.send({ from: accounts[1], gas: "5000000", value: "100" });
 			expect(false);
 		} catch (err) {
-			console.log(err.message)
 			expect(err).toBeTruthy();
 		}
 	});
@@ -150,5 +149,15 @@ describe("Bet Contract Factory", () => {
 			expect(parseInt(endTimestamp1)).toBe(parseInt(startTimestamp1) + 86400000);
 			expect(parseInt(endTimestamp2)).toBe(parseInt(startTimestamp2) + 86400000 * 2);
 		});
+
+		test("didWin function accurately return whether bet was won or lost", async () => {
+			const didWinCorrect = await betContract.methods.didWin(4520, Date.now() + 86400000*4).call()
+			const didWinFalseGuess = await betContract.methods.didWin(5000, Date.now() + 86400000*4).call()
+			const didWinFalseTime = await betContract.methods.didWin(4520, Date.now()).call()
+			
+			expect(didWinCorrect).toBe(true)
+			expect(didWinFalseGuess).toBe(false)
+			expect(didWinFalseTime).toBe(false)
+		})
 	});
 });
