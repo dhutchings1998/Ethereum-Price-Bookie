@@ -24,6 +24,10 @@ contract BetContractFactory {
 
     function fundBalance() external payable {}
 
+    function fetchBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
     function createBetContract(
         uint256 targetGuess,
         uint256 marginOfError,
@@ -35,7 +39,7 @@ contract BetContractFactory {
             "Need to contribute ether in order to place bet"
         );
         require(
-            msg.value < address(this).balance / 5,
+            msg.value < address(this).balance.div(5),
             "Can't bet more than 20% of the value of the pot"
         );
         require(
@@ -44,8 +48,12 @@ contract BetContractFactory {
         );
         require(marginOfError <= 50, "Margin of error must be less than $50");
         require(
+            block.timestamp.mul(1000).add(5000) > startTimestamp,
+            "Start timestamp can't be greater than block timestamp"
+        );
+        require(
             block.timestamp.mul(1000).add(5000).sub(startTimestamp) < 300000,
-            "Starting timestamp must be less than 5 minutes from block timestamp"
+            "Starting timestamp must be within 5 minutes of block timestamp"
         );
 
         BetContract newContract = new BetContract(
@@ -72,7 +80,9 @@ contract BetContractFactory {
         restricted
     {
         BetContract[] storage liveContracts = addressToContracts[bettor];
+        uint256 currentTimestamp = block.timestamp;
 
+        // Loop through contracts and update payout
         for (uint256 i = 0; i < liveContracts.length; i++) {
             BetContract bc = liveContracts[i];
             require(
@@ -80,11 +90,14 @@ contract BetContractFactory {
                 "Potential reward must be greater than $0"
             );
 
-            uint256 currentTimestamp = block.timestamp;
-
             if (bc.didWin(correctPrices[i], currentTimestamp) == true) {
                 addressToPayout[bettor] += bc.potentialReward();
             }
+        }
+
+        // Remove expired contracts
+        for (uint256 i = 0; i < liveContracts.length; i++) {
+            BetContract bc = liveContracts[i];
 
             if (currentTimestamp > bc.endTimestamp()) {
                 removeContract(i, liveContracts);
@@ -98,7 +111,11 @@ contract BetContractFactory {
         emit PayoutWinnings(recipient);
     }
 
-    function fetchBetContracts(address bettor) public view returns (BetContract[] memory) {
+    function fetchBetContracts(address bettor)
+        public
+        view
+        returns (BetContract[] memory)
+    {
         return addressToContracts[bettor];
     }
 
@@ -113,15 +130,15 @@ contract BetContractFactory {
 
 contract BetContract {
     using SafeMath for uint256;
-    address public bettor; // address
+    address public bettor;
     address public manager;
-    uint256 public betAmount; // wei
-    uint256 public targetGuess; //
+    uint256 public betAmount;
+    uint256 public targetGuess;
     uint256 public marginOfError;
-    uint256 public numDays; // int
-    uint256 public potentialReward; // wei
-    uint256 public startTimestamp; // timestamp
-    uint256 public endTimestamp; // timestamp
+    uint256 public numDays;
+    uint256 public potentialReward;
+    uint256 public startTimestamp;
+    uint256 public endTimestamp;
 
     modifier restricted() {
         require(msg.sender == manager, "Only manager can call this function");
