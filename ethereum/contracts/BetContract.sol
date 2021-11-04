@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BetContractFactory {
     using SafeMath for uint256;
-    address manager;
+    address public manager;
     mapping(address => BetContract[]) public addressToContracts;
     mapping(address => bool) public addressExists;
     mapping(address => uint256) public addressToPayout;
